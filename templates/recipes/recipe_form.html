@@ -1,0 +1,118 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% if is_edit %}Редактировать рецепт{% else %}Новый рецепт{% endif %} — кнопик &amp; попик</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/recipe-form.css' %}" />
+</head>
+<body>
+  <main class="page-shell recipe-form-page">
+    <div class="paper">
+      <header class="header">
+        <div class="header-inner section-inner">
+          <a class="logo" href="{% url 'home' %}">кнопик <span>&amp;</span> попик</a>
+          <nav class="nav"><a class="nav-active" href="{% url 'recipes:recipe_list' %}">рецепты</a></nav>
+        </div>
+      </header>
+
+      <section class="recipe-form-section section-inner">
+        <a class="recipe-back recipe-ui-label" href="{% if recipe %}{{ recipe.get_absolute_url }}{% else %}{% url 'recipes:recipe_list' %}{% endif %}">← {% if recipe %}К рецепту{% else %}К рецептам{% endif %}</a>
+        <h1>{% if is_edit %}Редактировать рецепт{% else %}Новый рецепт{% endif %}</h1>
+        <form method="post" enctype="multipart/form-data" class="recipe-editor" novalidate>
+          {% csrf_token %}
+          {{ recipe_form.non_field_errors }}
+
+          <section class="recipe-form-panel" aria-labelledby="basic-title">
+            <h2 id="basic-title">Основное</h2>
+            <div class="recipe-form-grid">
+              {% for field in recipe_form %}
+                <div class="recipe-field recipe-field--{{ field.name }}{% if field.name == 'description' or field.name == 'categories' %} recipe-field--wide{% endif %}">
+                  {{ field.label_tag }}
+                  {{ field }}
+                  {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                  {{ field.errors }}
+                </div>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="recipe-form-panel" aria-labelledby="groups-title">
+            <div class="recipe-form-section-head"><h2 id="groups-title">Группы ингредиентов</h2><button type="button" class="recipe-form-add" data-add-form="groups">Добавить группу</button></div>
+            {{ group_formset.management_form }}
+            {{ group_formset.non_form_errors }}
+            <div class="recipe-formset" data-formset="groups">
+              {% for form in group_formset %}
+                <div class="recipe-formset-row" data-formset-row>
+                  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                  {% for field in form.visible_fields %}<div class="recipe-field recipe-field--{{ field.name }}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+                </div>
+              {% endfor %}
+            </div>
+            <template id="groups-empty-form"><div class="recipe-formset-row" data-formset-row>{% for hidden in group_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}{% for field in group_formset.empty_form.visible_fields %}<div class="recipe-field recipe-field--{{ field.name }}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div></template>
+          </section>
+
+          <section class="recipe-form-panel" aria-labelledby="ingredients-title">
+            <div class="recipe-form-section-head"><h2 id="ingredients-title">Ингредиенты</h2><button type="button" class="recipe-form-add" data-add-form="ingredients">Добавить ингредиент</button></div>
+            <p class="recipe-form-help">Группу можно выбрать для уже сохранённых групп; продукт создаётся автоматически, если его ещё нет.</p>
+            {{ ingredient_formset.management_form }}
+            {{ ingredient_formset.non_form_errors }}
+            <div class="recipe-formset" data-formset="ingredients">
+              {% for form in ingredient_formset %}
+                <div class="recipe-formset-row recipe-formset-row--ingredient" data-formset-row>
+                  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                  {% for field in form.visible_fields %}<div class="recipe-field recipe-field--{{ field.name }}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+                </div>
+              {% endfor %}
+            </div>
+            <template id="ingredients-empty-form"><div class="recipe-formset-row recipe-formset-row--ingredient" data-formset-row>{% for hidden in ingredient_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}{% for field in ingredient_formset.empty_form.visible_fields %}<div class="recipe-field recipe-field--{{ field.name }}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div></template>
+          </section>
+
+          <section class="recipe-form-panel" aria-labelledby="steps-title">
+            <div class="recipe-form-section-head"><h2 id="steps-title">Шаги</h2><button type="button" class="recipe-form-add" data-add-form="steps">Добавить шаг</button></div>
+            {{ step_formset.management_form }}
+            {{ step_formset.non_form_errors }}
+            <div class="recipe-formset" data-formset="steps">
+              {% for form in step_formset %}
+                <div class="recipe-formset-row recipe-formset-row--step" data-formset-row>
+                  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                  {% for field in form.visible_fields %}<div class="recipe-field recipe-field--{{ field.name }}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+                </div>
+              {% endfor %}
+            </div>
+            <template id="steps-empty-form"><div class="recipe-formset-row recipe-formset-row--step" data-formset-row>{% for hidden in step_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}{% for field in step_formset.empty_form.visible_fields %}<div class="recipe-field recipe-field--{{ field.name }}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div></template>
+          </section>
+
+          <section class="recipe-form-panel" aria-labelledby="images-title">
+            <div class="recipe-form-section-head"><h2 id="images-title">Фото</h2><button type="button" class="recipe-form-add" data-add-form="images">Добавить фото</button></div>
+            {{ image_formset.management_form }}
+            {{ image_formset.non_form_errors }}
+            <div class="recipe-formset" data-formset="images">
+              {% for form in image_formset %}
+                <div class="recipe-formset-row recipe-formset-row--image" data-formset-row>
+                  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                  {% for field in form.visible_fields %}<div class="recipe-field recipe-field--{{ field.name }}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+                </div>
+              {% endfor %}
+            </div>
+            <template id="images-empty-form"><div class="recipe-formset-row recipe-formset-row--image" data-formset-row>{% for hidden in image_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}{% for field in image_formset.empty_form.visible_fields %}<div class="recipe-field recipe-field--{{ field.name }}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div></template>
+          </section>
+
+          <div class="recipe-form-actions">
+            <button class="recipe-form-submit" type="submit">{% if is_edit %}Сохранить изменения{% else %}Создать рецепт{% endif %}</button>
+            <a href="{% if recipe %}{{ recipe.get_absolute_url }}{% else %}{% url 'recipes:recipe_list' %}{% endif %}">Отмена</a>
+          </div>
+        </form>
+      </section>
+
+      <footer><div class="footer-inner section-inner"><strong>кнопик &amp; попик</strong><span>готовим · пробуем · запоминаем ♡</span></div></footer>
+    </div>
+  </main>
+  <script src="{% static 'js/recipe-form.js' %}" defer></script>
+</body>
+</html>

@@ -37,7 +37,7 @@
   };
 
   const openRecipeDeleteModal = (trigger) => {
-    deleteForm = null;
+    deleteForm = document.querySelector('[data-recipe-delete-form]');
     deleteType = 'recipe';
     lastFocusedElement = trigger;
     if (title) {
@@ -112,9 +112,6 @@
         return;
       }
 
-      if (deleteType === 'recipe') {
-        console.info('Recipe deletion demo confirmed');
-      }
       closeModal();
     }
   });

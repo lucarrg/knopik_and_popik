@@ -34,6 +34,7 @@
         <div class="section-inner">
           <h1>Все рецепты</h1>
           <p>Ищи по названию и продуктам — или просто выбирай глазами.</p>
+          {% if can_manage_recipes %}<p class="catalog-owner-create"><a class="recipe-action" href="{% url 'recipes:recipe_create' %}">Добавить рецепт</a></p>{% endif %}
           <form class="catalog-toolbar">
             <div class="search-control">
               <span class="control-label">поиск</span>

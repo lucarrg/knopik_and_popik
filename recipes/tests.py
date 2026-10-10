@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
@@ -5,7 +6,8 @@ from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from .actors import get_recipe_actor
-from .models import Recipe, RecipeNote
+from .forms import RecipeImageFormSet
+from .models import Category, Product, Recipe, RecipeImage, RecipeNote, Unit
 
 
 class RecipeDetailTests(TestCase):
@@ -169,3 +171,230 @@ class RecipeNoteCrudTests(TestCase):
         request.user = AnonymousUser()
 
         self.assertEqual(get_recipe_actor(request), self.actor)
+
+@override_settings(DEBUG=True)
+class RecipeCrudTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command('seed_demo_recipe')
+        cls.actor = get_user_model().objects.get(username='masha-demo')
+        cls.other_user = get_user_model().objects.create_user(
+            username='another-owner', password='test-password'
+        )
+        cls.categories = list(Category.objects.filter(slug__in=['osnovnye-blyuda', 'ryba']))
+        cls.gram = Unit.objects.get(abbreviation='г')
+
+    def formset_management(self, prefix, total=0, initial=0):
+        return {
+            f'{prefix}-TOTAL_FORMS': str(total),
+            f'{prefix}-INITIAL_FORMS': str(initial),
+            f'{prefix}-MIN_NUM_FORMS': '0',
+            f'{prefix}-MAX_NUM_FORMS': '1000',
+        }
+
+    def recipe_payload(self, **overrides):
+        payload = {
+            'title': 'Тестовый рецепт',
+            'description': 'Описание тестового рецепта.',
+            'publication_status': Recipe.PublicationStatus.PUBLISHED,
+            'recipe_status': Recipe.RecipeStatus.VERIFIED,
+            'base_servings': '4',
+            'prep_minutes': '10',
+            'cook_minutes': '20',
+            'difficulty': Recipe.Difficulty.EASY,
+            'rating': '4.5',
+            'source_url': '',
+            'categories': [str(category.pk) for category in self.categories],
+        }
+        payload.update(self.formset_management('groups'))
+        payload.update(self.formset_management('ingredients'))
+        payload.update(self.formset_management('steps'))
+        payload.update(self.formset_management('images'))
+        payload.update(overrides)
+        return payload
+
+    def create_url(self):
+        return reverse('recipes:recipe_create')
+
+    def create_recipe(self, **overrides):
+        response = self.client.post(self.create_url(), self.recipe_payload(**overrides))
+        self.assertEqual(response.status_code, 302, response.content.decode())
+        return Recipe.objects.filter(title=overrides.get('title', 'Тестовый рецепт')).latest('pk')
+
+    def test_create_recipe_sets_actor_generates_slug_and_saves_categories(self):
+        recipe = self.create_recipe(created_by=self.other_user.pk)
+
+        self.assertEqual(recipe.created_by, self.actor)
+        self.assertEqual(recipe.slug, 'testovyj-recept')
+        self.assertSetEqual(set(recipe.categories.all()), set(self.categories))
+        self.assertEqual(self.client.get(recipe.get_absolute_url()).status_code, 200)
+
+    def test_slug_gets_incrementing_suffix(self):
+        Recipe.objects.create(
+            title='Тестовый рецепт', slug='testovyj-recept', description='Первый.',
+            base_servings=1, prep_minutes=0, cook_minutes=0,
+            difficulty=Recipe.Difficulty.EASY, created_by=self.actor,
+        )
+        recipe = self.create_recipe()
+
+        self.assertEqual(recipe.slug, 'testovyj-recept-2')
+
+    def test_create_saves_ingredients_creates_and_reuses_products(self):
+        existing = Product.objects.create(name='Кускус')
+        payload = self.recipe_payload()
+        payload.update(self.formset_management('ingredients', total=3))
+        payload.update({
+            'ingredients-0-product_name': 'Новый продукт',
+            'ingredients-0-group': '',
+            'ingredients-0-quantity': '100',
+            'ingredients-0-unit': str(self.gram.pk),
+            'ingredients-0-note': '',
+            'ingredients-0-sort_order': '0',
+            'ingredients-1-product_name': 'Кускус',
+            'ingredients-1-group': '',
+            'ingredients-1-quantity': '120',
+            'ingredients-1-unit': str(self.gram.pk),
+            'ingredients-1-note': '',
+            'ingredients-1-sort_order': '1',
+            'ingredients-2-product_name': 'Соль',
+            'ingredients-2-group': '',
+            'ingredients-2-quantity': '',
+            'ingredients-2-unit': '',
+            'ingredients-2-note': 'по вкусу',
+            'ingredients-2-sort_order': '2',
+        })
+
+        response = self.client.post(self.create_url(), payload)
+        self.assertEqual(response.status_code, 302, response.content.decode())
+        recipe = Recipe.objects.get(title='Тестовый рецепт')
+        self.assertEqual(recipe.ingredients.count(), 3)
+        self.assertEqual(recipe.ingredients.get(product__normalized_name='новый продукт').quantity, 100)
+        self.assertEqual(recipe.ingredients.get(product=existing).quantity, 120)
+        to_taste = recipe.ingredients.get(product__normalized_name='соль')
+        self.assertIsNone(to_taste.quantity)
+        self.assertIsNone(to_taste.unit)
+        self.assertEqual(to_taste.note, 'по вкусу')
+
+    def test_create_saves_steps(self):
+        payload = self.recipe_payload()
+        payload.update(self.formset_management('steps', total=2))
+        payload.update({
+            'steps-0-title': 'Первый шаг', 'steps-0-text': 'Сделайте первое действие.', 'steps-0-sort_order': '0',
+            'steps-1-title': 'Второй шаг', 'steps-1-text': 'Сделайте второе действие.', 'steps-1-sort_order': '1',
+        })
+
+        response = self.client.post(self.create_url(), payload)
+        self.assertEqual(response.status_code, 302, response.content.decode())
+        recipe = Recipe.objects.get(title='Тестовый рецепт')
+        self.assertEqual(list(recipe.steps.values_list('title', flat=True)), ['Первый шаг', 'Второй шаг'])
+
+    def test_image_formset_rejects_multiple_cover_images(self):
+        recipe = Recipe.objects.create(
+            title='Для обложек', slug='for-covers', description='Тест.', base_servings=1,
+            prep_minutes=0, cook_minutes=0, difficulty=Recipe.Difficulty.EASY, created_by=self.actor,
+        )
+        image_bytes = (
+            b'GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+        )
+        data = self.formset_management('images', total=2)
+        data.update({
+            'images-0-alt_text': 'Первая', 'images-0-sort_order': '0', 'images-0-is_cover': 'on',
+            'images-1-alt_text': 'Вторая', 'images-1-sort_order': '1', 'images-1-is_cover': 'on',
+        })
+        files = {
+            'images-0-image': SimpleUploadedFile('first.gif', image_bytes, content_type='image/gif'),
+            'images-1-image': SimpleUploadedFile('second.gif', image_bytes, content_type='image/gif'),
+        }
+
+        formset = RecipeImageFormSet(data, files, instance=recipe, prefix='images')
+        self.assertFalse(formset.is_valid())
+        self.assertIn('только одна обложка', str(formset.non_form_errors()))
+
+    def test_edit_changes_fields_without_changing_slug(self):
+        recipe = Recipe.objects.create(
+            title='До изменения', slug='stable-slug', description='До.', base_servings=2,
+            prep_minutes=5, cook_minutes=10, difficulty=Recipe.Difficulty.EASY, created_by=self.actor,
+        )
+        payload = self.recipe_payload(
+            title='После изменения', description='После.', prep_minutes='25', categories=[]
+        )
+
+        response = self.client.post(reverse('recipes:recipe_edit', args=[recipe.slug]), payload)
+        self.assertRedirects(response, recipe.get_absolute_url(), fetch_redirect_response=False)
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.title, 'После изменения')
+        self.assertEqual(recipe.prep_minutes, 25)
+        self.assertEqual(recipe.slug, 'stable-slug')
+
+    def test_deleting_group_sets_linked_ingredients_group_to_none(self):
+        recipe = Recipe.objects.get(slug='orzo-s-lososem')
+        group = recipe.ingredient_groups.first()
+        ingredient = recipe.ingredients.first()
+        payload = self.recipe_payload(
+            title=recipe.title, description=recipe.description, base_servings=str(recipe.base_servings),
+            prep_minutes=str(recipe.prep_minutes), cook_minutes=str(recipe.cook_minutes),
+            difficulty=recipe.difficulty, publication_status=recipe.publication_status,
+            recipe_status=recipe.recipe_status, rating=str(recipe.rating), categories=[str(c.pk) for c in recipe.categories.all()],
+        )
+        payload.update(self.formset_management('groups', total=1, initial=1))
+        payload.update({'groups-0-id': str(group.pk), 'groups-0-name': group.name, 'groups-0-sort_order': str(group.sort_order), 'groups-0-DELETE': 'on'})
+        ingredients = list(recipe.ingredients.all())
+        payload.update(self.formset_management('ingredients', total=len(ingredients), initial=len(ingredients)))
+        for index, current in enumerate(ingredients):
+            payload.update({
+                f'ingredients-{index}-id': str(current.pk), f'ingredients-{index}-product_name': current.product.name,
+                f'ingredients-{index}-group': str(current.group_id or ''), f'ingredients-{index}-quantity': str(current.quantity or ''),
+                f'ingredients-{index}-unit': str(current.unit_id or ''), f'ingredients-{index}-note': current.note,
+                f'ingredients-{index}-sort_order': str(current.sort_order),
+            })
+        payload.update(self.formset_management('steps', total=0))
+        payload.update(self.formset_management('images', total=0))
+
+        response = self.client.post(reverse('recipes:recipe_edit', args=[recipe.slug]), payload)
+        self.assertEqual(response.status_code, 302, response.content.decode())
+        ingredient.refresh_from_db()
+        self.assertIsNone(ingredient.group)
+
+    def test_delete_recipe_requires_post_and_post_deletes(self):
+        recipe = Recipe.objects.create(
+            title='Удаляемый', slug='delete-me', description='Тест.', base_servings=1,
+            prep_minutes=0, cook_minutes=0, difficulty=Recipe.Difficulty.EASY, created_by=self.actor,
+        )
+        url = reverse('recipes:recipe_delete', args=[recipe.slug])
+
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.assertTrue(Recipe.objects.filter(pk=recipe.pk).exists())
+        response = self.client.post(url)
+        self.assertRedirects(response, reverse('recipes:recipe_list'), fetch_redirect_response=False)
+        self.assertFalse(Recipe.objects.filter(pk=recipe.pk).exists())
+
+    def test_invalid_step_formset_rolls_back_recipe_creation(self):
+        payload = self.recipe_payload(title='Не должен сохраниться')
+        payload.update(self.formset_management('steps', total=1))
+        payload.update({'steps-0-title': 'Есть заголовок', 'steps-0-text': '', 'steps-0-sort_order': '0'})
+
+        response = self.client.post(self.create_url(), payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Recipe.objects.filter(title='Не должен сохраниться').exists())
+
+    @override_settings(DEBUG=False)
+    def test_production_anonymous_cannot_mutate_and_cannot_view_draft(self):
+        draft = Recipe.objects.create(
+            title='Черновик', slug='private-draft', description='Черновик.', base_servings=1,
+            prep_minutes=0, cook_minutes=0, difficulty=Recipe.Difficulty.EASY,
+            publication_status=Recipe.PublicationStatus.DRAFT, created_by=self.actor,
+        )
+        self.assertEqual(self.client.get(draft.get_absolute_url()).status_code, 404)
+        self.assertEqual(self.client.post(self.create_url(), self.recipe_payload()).status_code, 403)
+        self.assertEqual(self.client.post(reverse('recipes:recipe_edit', args=[draft.slug]), self.recipe_payload()).status_code, 403)
+
+    @override_settings(DEBUG=False)
+    def test_authenticated_owner_can_view_draft(self):
+        draft = Recipe.objects.create(
+            title='Черновик владельца', slug='owner-draft', description='Черновик.', base_servings=1,
+            prep_minutes=0, cook_minutes=0, difficulty=Recipe.Difficulty.EASY,
+            publication_status=Recipe.PublicationStatus.DRAFT, created_by=self.actor,
+        )
+        self.client.force_login(self.actor)
+
+        self.assertEqual(self.client.get(draft.get_absolute_url()).status_code, 200)

@@ -127,10 +127,13 @@
           {% endfor %}
         </ol>
         {% if recipe.source_url %}<p class="recipe-source">Источник: <a href="{{ recipe.source_url }}">{{ recipe.source_url }}</a></p>{% endif %}
-        <div class="recipe-owner-actions recipe-owner-actions--footer" aria-label="Управление рецептом">
-          <button class="recipe-action" type="button">Редактировать рецепт</button>
-          <button class="recipe-action recipe-action--delete" type="button" data-confirm-delete="recipe">Удалить рецепт</button>
-        </div>
+        {% if can_manage_recipes %}
+          <div class="recipe-owner-actions recipe-owner-actions--footer" aria-label="Управление рецептом">
+            <a class="recipe-action" href="{% url 'recipes:recipe_edit' recipe.slug %}">Редактировать рецепт</a>
+            <button class="recipe-action recipe-action--delete" type="button" data-confirm-delete="recipe">Удалить рецепт</button>
+            <form method="post" action="{% url 'recipes:recipe_delete' recipe.slug %}" data-recipe-delete-form hidden>{% csrf_token %}</form>
+          </div>
+        {% endif %}
       </section>
 
       <div class="recipe-modal" data-confirmation-modal hidden>
