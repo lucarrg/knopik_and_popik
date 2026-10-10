@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Орзо с лососем — кнопик &amp; попик</title>
+  <title>{{ recipe.title }} — кнопик &amp; попик</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,600&display=swap" rel="stylesheet">
@@ -38,19 +38,19 @@
             <div class="recipe-hero-top">
               <a class="recipe-back recipe-ui-label" href="{% url 'recipes:recipe_list' %}">← К рецептам</a>
             </div>
-            <h1>Орзо с лососем</h1>
-            <p class="recipe-description">Нежное орзо со сливочным соусом и лососем.</p>
-            <div class="recipe-tags" aria-label="Категории рецепта"><span class="recipe-chip">Основные блюда</span><span class="recipe-chip">Рыба</span></div>
+            <h1>{{ recipe.title }}</h1>
+            <p class="recipe-description">{{ recipe.description }}</p>
+            <div class="recipe-tags" aria-label="Категории рецепта">{% for category in recipe.categories.all %}<span class="recipe-chip">{{ category.name }}</span>{% endfor %}</div>
             <dl class="recipe-meta recipe-hero-meta" aria-label="Характеристики рецепта">
-              <div><dt class="recipe-ui-label">Подготовка</dt><dd class="recipe-meta-value">15 мин</dd></div>
-              <div><dt class="recipe-ui-label">Готовка</dt><dd class="recipe-meta-value">30 мин</dd></div>
-              <div><dt class="recipe-ui-label">Сложность</dt><dd class="recipe-meta-value">Средне</dd></div>
-              <div><dt class="recipe-ui-label">Рейтинг</dt><dd class="recipe-meta-value">4.8 / 5</dd></div>
-              <div><dt class="recipe-ui-label">Статус</dt><dd class="recipe-meta-value recipe-status-value">Проверено</dd></div>
+              <div><dt class="recipe-ui-label">Подготовка</dt><dd class="recipe-meta-value">{{ recipe.prep_minutes }} мин</dd></div>
+              <div><dt class="recipe-ui-label">Готовка</dt><dd class="recipe-meta-value">{{ recipe.cook_minutes }} мин</dd></div>
+              <div><dt class="recipe-ui-label">Сложность</dt><dd class="recipe-meta-value">{{ recipe.get_difficulty_display }}</dd></div>
+              <div><dt class="recipe-ui-label">Рейтинг</dt><dd class="recipe-meta-value">{% if recipe.rating %}{{ recipe.rating }} / 5{% else %}—{% endif %}</dd></div>
+              <div><dt class="recipe-ui-label">Статус</dt><dd class="recipe-meta-value recipe-status-value">{{ recipe.get_recipe_status_display }}</dd></div>
             </dl>
           </div>
 
-          <figure class="recipe-main-photo"><img src="{% static 'images/demo/salmon-orzo.png' %}" alt="Орзо с лососем в сливочном соусе" /></figure>
+          <figure class="recipe-main-photo">{% if cover_image %}<img src="{{ cover_image.image.url }}" alt="{{ cover_image.alt_text|default:recipe.title }}" />{% else %}<img src="{% static 'images/demo/salmon-orzo.png' %}" alt="{{ recipe.title }} в сливочном соусе" />{% endif %}</figure>
         </div>
       </section>
 
@@ -58,22 +58,26 @@
         <div class="recipe-details-inner section-inner">
           <section class="recipe-ingredients" aria-labelledby="ingredients-title">
             <div class="recipe-ingredients-head">
-              <p class="recipe-section-kicker">на 4 порции</p>
+              <p class="recipe-section-kicker">на {{ recipe.base_servings }} порции</p>
               <section class="recipe-servings" aria-label="Управление количеством порций">
                 <div class="servings-controls">
                   <button type="button" aria-label="Уменьшить количество порций" data-servings-action="decrease">−</button>
                   <label class="sr-only" for="recipe-servings-count">Количество порций</label>
-                  <input id="recipe-servings-count" type="number" value="4" min="1" inputmode="numeric" />
+                  <input id="recipe-servings-count" type="number" value="{{ recipe.base_servings }}" min="1" inputmode="numeric" />
                   <button type="button" aria-label="Увеличить количество порций" data-servings-action="increase">+</button>
                 </div>
               </section>
             </div>
             <h2 id="ingredients-title">Ингредиенты</h2>
             <div class="ingredient-group">
-              <h3>Основное</h3>
-              <ul>
-                <li><span>Лосось</span><span>400 г</span></li><li><span>Орзо</span><span>250 г</span></li><li><span>Шпинат</span><span>150 г</span></li><li><span>Лук</span><span>1 шт.</span></li><li><span>Чеснок</span><span>2 зубчика</span></li><li><span>Сливки 20%</span><span>200 мл</span></li><li><span>Пармезан</span><span>50 г</span></li><li><span>Лимон</span><span>1 шт.</span></li><li><span>Оливковое масло</span><span>2 ст. л.</span></li><li><span>Соль и перец</span><span>по вкусу</span></li>
-              </ul>
+              {% for group in recipe.ingredient_groups.all %}
+                {% if group.name %}<h3>{{ group.name }}</h3>{% endif %}
+                <ul>
+                  {% for ingredient in group.ingredients.all %}
+                    <li><span>{{ ingredient.product.name }}</span><span>{% if ingredient.quantity %}{{ ingredient.quantity|floatformat:"-2" }}{% if ingredient.unit %} {{ ingredient.unit.abbreviation }}{% endif %}{% elif ingredient.note %}{{ ingredient.note }}{% endif %}</span></li>
+                  {% endfor %}
+                </ul>
+              {% endfor %}
             </div>
           </section>
 
@@ -81,17 +85,19 @@
             <h2 id="notes-title">Заметки</h2>
 
             <div class="notes-list" data-notes-list>
-              <article class="recipe-note" data-note>
-                <p class="note-meta">Маша · 10 октября 2026</p>
-                <p class="note-content">Я добавляю шпинат в самом конце: он остаётся ярким и не теряет свежесть рядом с тёплым сливочным соусом.</p>
-                <div class="note-owner-actions" aria-label="Управление заметкой">
-                  <button type="button" data-note-action="edit">Редактировать</button>
-                  <button type="button" data-note-action="delete" data-confirm-delete="note">Удалить</button>
-                </div>
-              </article>
+              {% for note in recipe.notes.all %}
+                <article class="recipe-note" data-note>
+                  <p class="note-meta">{{ note.author.get_full_name|default:note.author.username }} · {{ note.created_at|date:"j F Y" }}</p>
+                  <p class="note-content">{{ note.text }}</p>
+                  <div class="note-owner-actions" aria-label="Управление заметкой">
+                    <button type="button" data-note-action="edit">Редактировать</button>
+                    <button type="button" data-note-action="delete" data-confirm-delete="note">Удалить</button>
+                  </div>
+                </article>
+              {% endfor %}
             </div>
 
-            <p class="notes-empty" data-notes-empty hidden>Здесь пока нет заметок.</p>
+            <p class="notes-empty" data-notes-empty{% if recipe.notes.all %} hidden{% endif %}>Здесь пока нет заметок.</p>
 
             <form class="note-form" data-note-form>
               <label for="new-note">Добавить заметку</label>
@@ -106,12 +112,11 @@
         <p class="recipe-section-kicker">готовим вместе</p>
         <h2 id="steps-title">Как приготовить</h2>
         <ol class="recipe-step-list">
-          <li><article class="recipe-step"><p class="recipe-step-number">Шаг 1</p><h3>Подготовьте продукты</h3><p>Лук нарежьте мелким кубиком, чеснок измельчите. Лосось обсушите и разделите на крупные кусочки, лимон натрите на мелкой тёрке.</p><figure class="recipe-step-photo"><img src="{% static 'images/demo/salmon-orzo.png' %}" alt="Подготовленные лосось и орзо" /></figure></article></li>
-          <li><article class="recipe-step"><p class="recipe-step-number">Шаг 2</p><h3>Обжарьте основу</h3><p>В глубокой сковороде разогрейте оливковое масло. Обжарьте лук до мягкости, добавьте чеснок и орзо, перемешайте, чтобы крупинки покрылись маслом.</p></article></li>
-          <li><article class="recipe-step"><p class="recipe-step-number">Шаг 3</p><h3>Добавьте сливочность</h3><p>Влейте горячую воду или бульон небольшими порциями и готовьте орзо до мягкости. Добавьте сливки, пармезан и лимонную цедру, посолите и поперчите.</p><figure class="recipe-step-photo"><img src="{% static 'images/demo/salmon-orzo.png' %}" alt="Орзо в сливочном соусе" /></figure></article></li>
-          <li><article class="recipe-step"><p class="recipe-step-number">Шаг 4</p><h3>Соберите блюдо</h3><p>Выложите в сковороду лосось и шпинат, аккуратно перемешайте. Накройте на минуту, затем разложите по тарелкам и добавьте немного лимонного сока.</p></article></li>
+          {% for step in recipe.steps.all %}
+            <li><article class="recipe-step"><p class="recipe-step-number">Шаг {{ forloop.counter }}</p><h3>{{ step.title }}</h3><p>{{ step.text }}</p>{% if step.image %}<figure class="recipe-step-photo"><img src="{{ step.image.url }}" alt="{{ step.title }}" /></figure>{% endif %}</article></li>
+          {% endfor %}
         </ol>
-        <p class="recipe-source">Источник: <a href="https://example.com/recipe/orzo-salmon">example.com/recipe/orzo-salmon</a></p>
+        {% if recipe.source_url %}<p class="recipe-source">Источник: <a href="{{ recipe.source_url }}">{{ recipe.source_url }}</a></p>{% endif %}
         <div class="recipe-owner-actions recipe-owner-actions--footer" aria-label="Управление рецептом">
           <button class="recipe-action" type="button">Редактировать рецепт</button>
           <button class="recipe-action recipe-action--delete" type="button" data-confirm-delete="recipe">Удалить рецепт</button>
