@@ -1,6 +1,9 @@
+from decimal import Decimal, InvalidOperation
+
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import F, Prefetch, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -16,7 +19,7 @@ from .forms import (
     RecipeNoteForm,
     RecipeStepFormSet,
 )
-from .models import IngredientGroup, Recipe, RecipeImage, RecipeIngredient, RecipeNote
+from .models import Category, IngredientGroup, Recipe, RecipeImage, RecipeIngredient, RecipeNote
 
 
 _TRANSLITERATION = str.maketrans({
@@ -45,8 +48,152 @@ def _can_manage_recipes(request):
     return True
 
 
+CATALOG_TIME_CHOICES = (
+    ('30', 'до 30 мин'),
+    ('60', 'до 60 мин'),
+    ('90', 'до 90 мин'),
+)
+CATALOG_SORT_CHOICES = (
+    ('new', 'Сначала новые'),
+    ('title', 'По алфавиту'),
+    ('-title', 'По алфавиту Я–А'),
+    ('-rating', 'По рейтингу'),
+    ('time', 'Сначала быстрые'),
+)
+CATALOG_SORTING = {
+    'new': ('-published_at', '-created_at', '-id'),
+    'title': ('title', 'id'),
+    '-title': ('-title', '-id'),
+    '-rating': ('-rating', 'title', 'id'),
+    'time': ('total_time', 'title', 'id'),
+}
+
+
+def _catalog_product_values(request):
+    values = []
+    for raw_value in request.GET.getlist('product'):
+        values.extend(raw_value.split(','))
+    return list(dict.fromkeys(value.strip().lower() for value in values if value.strip()))
+
+
+def _catalog_rating(value):
+    if not value:
+        return None
+    try:
+        rating = Decimal(value)
+    except InvalidOperation:
+        return None
+    return rating if Decimal('1') <= rating <= Decimal('5') else None
+
+
+def _catalog_queryset(request, *, can_manage_recipes, category_slugs, product_values, time_value, difficulty, rating, sort):
+    queryset = Recipe.objects.all() if can_manage_recipes else Recipe.objects.filter(
+        publication_status=Recipe.PublicationStatus.PUBLISHED
+    )
+    queryset = queryset.annotate(total_time=F('prep_minutes') + F('cook_minutes'))
+
+    query = request.GET.get('q', '').strip()
+    if query:
+        queryset = queryset.filter(
+            Q(title__icontains=query)
+            | Q(description__icontains=query)
+            | Q(ingredients__product__name__icontains=query)
+        )
+
+    if category_slugs:
+        queryset = queryset.filter(categories__slug__in=category_slugs)
+
+    for product_value in product_values:
+        queryset = queryset.filter(ingredients__product__normalized_name=product_value)
+
+    if time_value:
+        queryset = queryset.filter(total_time__lte=int(time_value))
+    if difficulty:
+        queryset = queryset.filter(difficulty=difficulty)
+    if rating is not None:
+        queryset = queryset.filter(rating__gte=rating)
+
+    return (
+        queryset.distinct()
+        .select_related('created_by')
+        .prefetch_related(
+            'categories',
+            Prefetch(
+                'images',
+                queryset=RecipeImage.objects.filter(is_cover=True).only(
+                    'id', 'recipe_id', 'image', 'alt_text', 'sort_order', 'is_cover'
+                ),
+                to_attr='cover_images',
+            ),
+        )
+        .order_by(*CATALOG_SORTING[sort])
+    )
+
+
 def recipe_list(request):
-    return render(request, 'recipes.html', {'can_manage_recipes': _can_manage_recipes(request)})
+    can_manage_recipes = _can_manage_recipes(request)
+    categories = list(Category.objects.select_related('parent').all())
+    valid_category_slugs = {category.slug for category in categories}
+    category_slugs = list(
+        dict.fromkeys(
+            slug for slug in request.GET.getlist('category') if slug in valid_category_slugs
+        )
+    )
+    product_values = _catalog_product_values(request)
+    time_values = {value for value, _ in CATALOG_TIME_CHOICES}
+    time_value = request.GET.get('time', '')
+    if time_value not in time_values:
+        time_value = ''
+    difficulty_values = {value for value, _ in Recipe.Difficulty.choices}
+    difficulty = request.GET.get('difficulty', '')
+    if difficulty not in difficulty_values:
+        difficulty = ''
+    rating = _catalog_rating(request.GET.get('rating', ''))
+    sort_values = {value for value, _ in CATALOG_SORT_CHOICES}
+    sort = request.GET.get('sort', 'new')
+    if sort not in sort_values:
+        sort = 'new'
+
+    queryset = _catalog_queryset(
+        request,
+        can_manage_recipes=can_manage_recipes,
+        category_slugs=category_slugs,
+        product_values=product_values,
+        time_value=time_value,
+        difficulty=difficulty,
+        rating=rating,
+        sort=sort,
+    )
+    paginator = Paginator(queryset, 12)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    active_filter_count = len(category_slugs) + len(product_values)
+    active_filter_count += int(bool(time_value)) + int(bool(difficulty)) + int(rating is not None)
+
+    return render(
+        request,
+        'recipes.html',
+        {
+            'can_manage_recipes': can_manage_recipes,
+            'categories': categories,
+            'page_obj': page_obj,
+            'recipes': page_obj.object_list,
+            'query': request.GET.get('q', '').strip(),
+            'selected_category_slugs': set(category_slugs),
+            'product_values': product_values,
+            'product_query': ', '.join(product_values),
+            'time_value': time_value,
+            'difficulty': difficulty,
+            'rating_value': rating,
+            'sort': sort,
+            'time_choices': CATALOG_TIME_CHOICES,
+            'sort_choices': CATALOG_SORT_CHOICES,
+            'active_filter_count': active_filter_count,
+            'has_active_filters': bool(active_filter_count),
+            'query_string': query_params.urlencode(),
+        },
+    )
 
 
 def _recipe_detail_queryset():

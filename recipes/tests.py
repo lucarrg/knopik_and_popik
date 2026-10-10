@@ -2,12 +2,14 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.db import connection
 from django.test import RequestFactory, TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from .actors import get_recipe_actor
 from .forms import RecipeImageFormSet
-from .models import Category, Product, Recipe, RecipeImage, RecipeNote, Unit
+from .models import Category, Product, Recipe, RecipeImage, RecipeIngredient, RecipeNote, Unit
 
 
 class RecipeDetailTests(TestCase):
@@ -398,3 +400,149 @@ class RecipeCrudTests(TestCase):
         self.client.force_login(self.actor)
 
         self.assertEqual(self.client.get(draft.get_absolute_url()).status_code, 200)
+
+@override_settings(DEBUG=False)
+class RecipeCatalogTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command('seed_demo_recipe')
+        cls.actor = get_user_model().objects.get(username='masha-demo')
+        cls.main_category = Category.objects.get(slug='osnovnye-blyuda')
+        cls.fish_category = Category.objects.get(slug='ryba')
+        cls.breakfast_category = Category.objects.create(name='Завтраки', slug='zavtraki')
+        cls.salmon = cls.product('Лосось')
+        cls.lemon = cls.product('Лимон')
+        cls.chicken = cls.product('Курица')
+        cls.fast_recipe = cls.make_recipe(
+            'Быстрый лимонный завтрак', 'fast-lemon-breakfast',
+            'Быстрое блюдо с ярким лимонным вкусом.', [cls.breakfast_category],
+            [cls.lemon], prep=5, cook=10, difficulty=Recipe.Difficulty.EASY, rating='4.0',
+        )
+        cls.combo_recipe = cls.make_recipe(
+            'Лосось с лимоном', 'salmon-with-lemon',
+            'Рецепт, где есть оба продукта.', [cls.main_category, cls.fish_category],
+            [cls.salmon, cls.lemon], prep=20, cook=20, difficulty=Recipe.Difficulty.MEDIUM, rating='4.9',
+        )
+        cls.salmon_only_recipe = cls.make_recipe(
+            'Лосось без лимона', 'salmon-only',
+            'Рецепт только с лососем.', [cls.fish_category], [cls.salmon],
+            prep=40, cook=40, difficulty=Recipe.Difficulty.HARD, rating='3.5',
+        )
+        cls.draft_recipe = cls.make_recipe(
+            'Скрытый черновик', 'hidden-draft', 'Не должен быть публичным.',
+            [cls.main_category], [cls.chicken], prep=10, cook=10,
+            difficulty=Recipe.Difficulty.EASY, rating='5.0', status=Recipe.PublicationStatus.DRAFT,
+        )
+        for index in range(13):
+            cls.make_recipe(
+                f'Страница {index}', f'page-recipe-{index}', 'Для проверки пагинации.',
+                [cls.main_category], [cls.chicken], prep=15, cook=15,
+                difficulty=Recipe.Difficulty.EASY, rating='4.0',
+            )
+
+    @classmethod
+    def product(cls, name):
+        return Product.objects.get_or_create(normalized_name=name.lower(), defaults={'name': name})[0]
+
+    @classmethod
+    def make_recipe(cls, title, slug, description, categories, products, *, prep, cook, difficulty, rating, status=Recipe.PublicationStatus.PUBLISHED):
+        recipe = Recipe.objects.create(
+            title=title, slug=slug, description=description, base_servings=2,
+            prep_minutes=prep, cook_minutes=cook, difficulty=difficulty, rating=rating,
+            publication_status=status, created_by=cls.actor,
+        )
+        recipe.categories.set(categories)
+        for order, product in enumerate(products):
+            RecipeIngredient.objects.create(recipe=recipe, product=product, sort_order=order)
+        return recipe
+
+    def catalog_url(self):
+        return reverse('recipes:recipe_list')
+
+    def recipe_slugs(self, response):
+        return {recipe.slug for recipe in response.context['recipes']}
+
+    def test_public_sees_published_but_not_draft_and_no_create_link(self):
+        response = self.client.get(self.catalog_url(), {'q': 'Быстрый лимонный'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.fast_recipe.slug, self.recipe_slugs(response))
+        self.assertNotIn(self.draft_recipe.slug, self.recipe_slugs(response))
+        self.assertNotContains(response, 'Добавить рецепт')
+
+    def test_owner_sees_drafts_and_create_link(self):
+        self.client.force_login(self.actor)
+        response = self.client.get(self.catalog_url(), {'q': 'Скрытый черновик'})
+
+        self.assertIn(self.draft_recipe.slug, self.recipe_slugs(response))
+        self.assertContains(response, 'Черновик')
+        self.assertContains(response, 'Добавить рецепт')
+
+    def test_search_matches_title_and_description(self):
+        title_response = self.client.get(self.catalog_url(), {'q': 'лимонный завтрак'})
+        description_response = self.client.get(self.catalog_url(), {'q': 'ярким лимонным'})
+
+        self.assertEqual(self.recipe_slugs(title_response), {self.fast_recipe.slug})
+        self.assertEqual(self.recipe_slugs(description_response), {self.fast_recipe.slug})
+
+    def test_category_filter_uses_or_semantics(self):
+        response = self.client.get(
+            self.catalog_url(),
+            {'category': [self.breakfast_category.slug, self.fish_category.slug]},
+        )
+        slugs = self.recipe_slugs(response)
+
+        self.assertIn(self.fast_recipe.slug, slugs)
+        self.assertIn(self.combo_recipe.slug, slugs)
+        self.assertIn(self.salmon_only_recipe.slug, slugs)
+
+    def test_product_filter_uses_and_semantics(self):
+        response = self.client.get(self.catalog_url(), {'product': ['лосось', 'лимон']})
+
+        self.assertEqual(self.recipe_slugs(response), {self.combo_recipe.slug, 'orzo-s-lososem'})
+
+    def test_filters_time_difficulty_and_rating(self):
+        response = self.client.get(self.catalog_url(), {'q': 'Быстрый лимонный', 'time': '30', 'difficulty': 'easy', 'rating': '4'})
+
+        self.assertIn(self.fast_recipe.slug, self.recipe_slugs(response))
+        self.assertNotIn(self.combo_recipe.slug, self.recipe_slugs(response))
+
+    def test_sorting_by_title_rating_and_time(self):
+        title_response = self.client.get(self.catalog_url(), {'sort': 'title'})
+        rating_response = self.client.get(self.catalog_url(), {'sort': '-rating'})
+        time_response = self.client.get(self.catalog_url(), {'sort': 'time'})
+
+        self.assertEqual(title_response.context['recipes'][0].title, 'Быстрый лимонный завтрак')
+        self.assertEqual(rating_response.context['recipes'][0].slug, self.combo_recipe.slug)
+        self.assertEqual(time_response.context['recipes'][0].slug, self.fast_recipe.slug)
+
+    def test_invalid_params_do_not_fail_and_reset_url_is_clean(self):
+        response = self.client.get(
+            self.catalog_url(),
+            {'time': 'invalid', 'difficulty': 'wrong', 'rating': '99', 'sort': 'unknown'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(reverse('recipes:recipe_list'), '/recipes/')
+        self.assertContains(response, 'Сбросить фильтры', count=0)
+
+    def test_pagination_and_filter_query_string(self):
+        response = self.client.get(self.catalog_url(), {'category': self.main_category.slug, 'q': 'Страница', 'page': '2'})
+
+        self.assertEqual(response.context['page_obj'].number, 2)
+        self.assertContains(response, 'category=osnovnye-blyuda')
+        self.assertContains(response, 'q=%D0%A1%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0')
+
+    def test_m2m_filters_do_not_duplicate_cards(self):
+        response = self.client.get(self.catalog_url(), {'q': 'лосось', 'category': self.fish_category.slug})
+        slugs = [recipe.slug for recipe in response.context['recipes']]
+
+        self.assertEqual(len(slugs), len(set(slugs)))
+
+    def test_catalog_uses_bounded_number_of_queries(self):
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(self.catalog_url())
+            list(response.context['recipes'])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(len(queries), 6)

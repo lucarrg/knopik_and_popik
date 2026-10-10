@@ -35,16 +35,15 @@
           <h1>Все рецепты</h1>
           <p>Ищи по названию и продуктам — или просто выбирай глазами.</p>
           {% if can_manage_recipes %}<p class="catalog-owner-create"><a class="recipe-action" href="{% url 'recipes:recipe_create' %}">Добавить рецепт</a></p>{% endif %}
-          <form class="catalog-toolbar">
+          <form id="catalog-filter-form" class="catalog-toolbar" method="get" action="{% url 'recipes:recipe_list' %}">
             <div class="search-control">
               <span class="control-label">поиск</span>
               <div class="catalog-search-field">
                 <label class="sr-only" for="catalog-search">Поиск рецептов</label>
-                <input id="catalog-search" type="search" placeholder="Название блюда или продукт..." />
+                <input id="catalog-search" name="q" type="search" value="{{ query }}" placeholder="Название блюда или продукт..." />
                 <button type="submit">найти <span>→</span></button>
               </div>
             </div>
-
           </form>
         </div>
       </section>
@@ -53,78 +52,88 @@
         <div class="catalog-layout section-inner">
           <div class="catalog-filter-region" id="catalog-filters-panel">
             <div class="filters-mobile-controls">
-              <button class="filters-toggle" type="button" aria-expanded="false" aria-controls="catalog-filters-panel"><span class="filters-toggle-label">Фильтры</span><span class="filters-toggle-icon" aria-hidden="true">↓</span></button>
+              <button class="filters-toggle" type="button" aria-expanded="false" aria-controls="catalog-filters-panel"><span class="filters-toggle-label">Фильтры{% if active_filter_count %} · {{ active_filter_count }}{% endif %}</span><span class="filters-toggle-icon" aria-hidden="true">↓</span></button>
             </div>
-          <aside class="catalog-filters" aria-label="Фильтры рецептов">
-            <div class="filters-columns">
-              <div class="filters-column filters-column--left">
-                <fieldset class="filter-group filter-group--category">
-                  <legend class="filter-title">Категория</legend>
-                  <div class="filter-content filter-options">
-                    <label><input type="checkbox" /> Завтраки</label>
-                    <label><input type="checkbox" /> Основные блюда</label>
-                    <label><input type="checkbox" /> Выпечка</label>
-                    <label><input type="checkbox" /> Десерты</label>
-                    <label><input type="checkbox" /> Супы</label>
-                  </div>
-                </fieldset>
-                <fieldset class="filter-group filter-group--time">
-                  <legend class="filter-title">Время</legend>
-                  <div class="filter-content filter-options">
-                    <label><input type="radio" name="cooking-time" /> до 30 мин</label>
-                    <label><input type="radio" name="cooking-time" /> до 60 мин</label>
-                    <label><input type="radio" name="cooking-time" /> до 90 мин</label>
-                  </div>
-                </fieldset>
+            <aside class="catalog-filters" aria-label="Фильтры рецептов">
+              <div class="filters-columns">
+                <div class="filters-column filters-column--left">
+                  <fieldset class="filter-group filter-group--category">
+                    <legend class="filter-title">Категория</legend>
+                    <div class="filter-content filter-options">
+                      {% for category in categories %}
+                        <label><input form="catalog-filter-form" type="checkbox" name="category" value="{{ category.slug }}"{% if category.slug in selected_category_slugs %} checked{% endif %} /> {{ category.name }}</label>
+                      {% endfor %}
+                    </div>
+                  </fieldset>
+                  <fieldset class="filter-group filter-group--time">
+                    <legend class="filter-title">Время</legend>
+                    <div class="filter-content filter-options">
+                      {% for value, label in time_choices %}
+                        <label><input form="catalog-filter-form" type="radio" name="time" value="{{ value }}"{% if time_value == value %} checked{% endif %} /> {{ label }}</label>
+                      {% endfor %}
+                    </div>
+                  </fieldset>
+                </div>
+                <div class="filters-column filters-column--right">
+                  <fieldset class="filter-group filter-group--products">
+                    <legend class="filter-title">Продукты</legend>
+                    <div class="filter-content filter-products-content">
+                      <label class="sr-only" for="catalog-product">Продукты через запятую</label>
+                      <input form="catalog-filter-form" class="ingredient-input" id="catalog-product" name="product" type="text" value="{{ product_query }}" placeholder="Добавить продукт..." />
+                      {% if product_values %}<div class="selected-chips" aria-label="Выбранные продукты">{% for product in product_values %}<span>{{ product }}</span>{% endfor %}</div>{% endif %}
+                    </div>
+                  </fieldset>
+                  <fieldset class="filter-group filter-group--difficulty">
+                    <legend class="filter-title">Сложность</legend>
+                    <div class="filter-content filter-options">
+                      <label><input form="catalog-filter-form" type="radio" name="difficulty" value="easy"{% if difficulty == 'easy' %} checked{% endif %} /> Легко</label>
+                      <label><input form="catalog-filter-form" type="radio" name="difficulty" value="medium"{% if difficulty == 'medium' %} checked{% endif %} /> Средне</label>
+                      <label><input form="catalog-filter-form" type="radio" name="difficulty" value="hard"{% if difficulty == 'hard' %} checked{% endif %} /> Посложнее</label>
+                    </div>
+                  </fieldset>
+                  <fieldset class="filter-group filter-group--sort">
+                    <legend id="sort-title" class="filter-title">сортировать</legend>
+                    <div class="filter-content">
+                      <select form="catalog-filter-form" id="sort-recipes" name="sort" aria-labelledby="sort-title">
+                        {% for value, label in sort_choices %}<option value="{{ value }}"{% if sort == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                      </select>
+                    </div>
+                  </fieldset>
+                </div>
               </div>
-              <div class="filters-column filters-column--right">
-                <fieldset class="filter-group filter-group--products">
-                  <legend class="filter-title">Продукты</legend>
-                  <div class="filter-content filter-products-content">
-                    <input class="ingredient-input" type="text" placeholder="Добавить продукт..." />
-                    <div class="selected-chips"><span>курица <button type="button" aria-label="Удалить курицу">×</button></span><span>сыр <button type="button" aria-label="Удалить сыр">×</button></span></div>
-                  </div>
-                </fieldset>
-                <fieldset class="filter-group filter-group--difficulty">
-                  <legend class="filter-title">Сложность</legend>
-                  <div class="filter-content filter-options">
-                    <label><input type="radio" name="difficulty" /> Легко</label>
-                    <label><input type="radio" name="difficulty" /> Средне</label>
-                    <label><input type="radio" name="difficulty" /> Посложнее</label>
-                  </div>
-                </fieldset>
-                <fieldset class="filter-group filter-group--sort">
-                  <legend id="sort-title" class="filter-title">сортировать</legend>
-                  <div class="filter-content">
-                    <select id="sort-recipes" aria-labelledby="sort-title">
-                      <option>Сначала новые</option>
-                      <option>По алфавиту</option>
-                      <option>По рейтингу</option>
-                      <option>Сначала быстрые</option>
-                    </select>
-                  </div>
-                </fieldset>
-              </div>
-            </div>
-
-            <button class="filters-reset" type="button" hidden>Сбросить фильтры</button>
-          </aside>
-
+              {% if has_active_filters %}<a class="filters-reset" href="{% url 'recipes:recipe_list' %}">Сбросить фильтры</a>{% endif %}
+            </aside>
           </div>
 
           <div class="catalog-results">
-            <p class="results-count">Найдено 24 рецепта</p>
-            <div class="catalog-grid">
-              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/salmon-orzo.png' %}" alt="Орзо с лососем" /></div><small>основные блюда · 25 мин</small><h3>Орзо с лососем</h3></a></article>
-              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/syrniki-cherry.png' %}" alt="Сырники с вишней" /></div><small>завтраки · 35 мин</small><h3>Сырники с вишней</h3></a></article>
-              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/apple-pie.png' %}" alt="Яблочный пирог" /></div><small>выпечка · 45 мин</small><h3>Яблочный пирог</h3></a></article>
-              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/tomato-soup.png' %}" alt="Томатный суп" /></div><small>супы · 55 мин</small><h3>Томатный суп</h3></a></article>
-              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/hero-raspberry.png' %}" alt="Творожная запеканка с малиной" /></div><small>десерты · 40 мин</small><h3>Запеканка с малиной</h3></a></article>
-              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/random-shrimp-noodles.png' %}" alt="Лапша с креветками" /></div><small>основные блюда · 30 мин</small><h3>Лапша с креветками</h3></a></article>
-              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/salmon-orzo.png' %}" alt="Орзо с лососем" /></div><small>основные блюда · 25 мин</small><h3>Орзо с лососем</h3></a></article>
-              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/syrniki-cherry.png' %}" alt="Сырники с вишней" /></div><small>завтраки · 35 мин</small><h3>Сырники с вишней</h3></a></article>
-              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/tomato-soup.png' %}" alt="Томатный суп" /></div><small>супы · 55 мин</small><h3>Томатный суп</h3></a></article>
-            </div>
+            <p class="results-count">Найдено {{ page_obj.paginator.count }} {{ page_obj.paginator.count|pluralize:"рецепт,рецепта,рецептов" }}</p>
+            {% if recipes %}
+              <div class="catalog-grid">
+                {% for recipe in recipes %}
+                  <article class="catalog-card">
+                    <a href="{{ recipe.get_absolute_url }}">
+                      <div class="catalog-card-photo">{% if recipe.cover_images %}<img src="{{ recipe.cover_images.0.image.url }}" alt="{{ recipe.cover_images.0.alt_text|default:recipe.title }}" />{% else %}<img src="{% static 'images/demo/salmon-orzo.png' %}" alt="" />{% endif %}</div>
+                      <small>{% for category in recipe.categories.all %}{{ category.name }}{% if not forloop.last %} · {% endif %}{% empty %}без категории{% endfor %} · {{ recipe.total_time }} мин{% if recipe.rating %} · {{ recipe.rating }} / 5{% endif %}</small>
+                      <h3>{{ recipe.title }}</h3>
+                      {% if can_manage_recipes and recipe.publication_status == 'draft' %}<span class="catalog-draft">Черновик</span>{% endif %}
+                    </a>
+                  </article>
+                {% endfor %}
+              </div>
+              {% if page_obj.paginator.num_pages > 1 %}
+                <nav class="catalog-pagination" aria-label="Страницы рецептов">
+                  {% if page_obj.has_previous %}<a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">← Назад</a>{% endif %}
+                  <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+                  {% if page_obj.has_next %}<a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Вперёд →</a>{% endif %}
+                </nav>
+              {% endif %}
+            {% else %}
+              <div class="catalog-empty">
+                <h2>Ничего не найдено</h2>
+                <p>Попробуйте изменить фильтры или сбросить их.</p>
+                {% if has_active_filters %}<a class="recipe-action" href="{% url 'recipes:recipe_list' %}">Сбросить фильтры</a>{% endif %}
+              </div>
+            {% endif %}
           </div>
         </div>
       </section>
