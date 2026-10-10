@@ -82,29 +82,39 @@
           </section>
 
           <aside class="recipe-notes" aria-labelledby="notes-title">
-            <h2 id="notes-title">Заметки</h2>
-
-            <div class="notes-list" data-notes-list>
-              {% for note in recipe.notes.all %}
-                <article class="recipe-note" data-note>
-                  <p class="note-meta">{{ note.author.get_full_name|default:note.author.username }} · {{ note.created_at|date:"j F Y" }}</p>
-                  <p class="note-content">{{ note.text }}</p>
-                  <div class="note-owner-actions" aria-label="Управление заметкой">
-                    <button type="button" data-note-action="edit">Редактировать</button>
-                    <button type="button" data-note-action="delete" data-confirm-delete="note">Удалить</button>
+          <h2 id="notes-title">Заметки</h2>
+          <div class="notes-list" data-notes-list>
+            {% for note in recipe.notes.all %}
+              <article class="recipe-note" data-note>
+                <p class="note-meta">{% firstof note.author.first_name note.author.username %} · {{ note.created_at|date:"j F Y" }}</p>
+                <p class="note-content">{{ note.text }}</p>
+                <form class="note-edit-form" method="post" action="{% url 'recipes:recipe_note_edit' recipe.slug note.pk %}" hidden>
+                  {% csrf_token %}
+                  <label class="sr-only" for="note-{{ note.pk }}-text">Текст заметки</label>
+                  <textarea id="note-{{ note.pk }}-text" class="note-edit-field" name="text" rows="4">{{ note.text }}</textarea>
+                  <div class="note-edit-actions">
+                    <button type="submit">Сохранить</button>
+                    <button type="button" data-note-edit-cancel>Отмена</button>
                   </div>
-                </article>
-              {% endfor %}
-            </div>
-
-            <p class="notes-empty" data-notes-empty{% if recipe.notes.all %} hidden{% endif %}>Здесь пока нет заметок.</p>
-
-            <form class="note-form" data-note-form>
-              <label for="new-note">Добавить заметку</label>
-              <textarea id="new-note" name="note" rows="4" placeholder="Добавить заметку…"></textarea>
-              <button type="submit">Добавить</button>
-            </form>
-          </aside>
+                </form>
+                <div class="note-owner-actions" aria-label="Управление заметкой">
+                  <button type="button" data-note-action="edit">Редактировать</button>
+                  <button type="button" data-confirm-delete="note">Удалить</button>
+                </div>
+                <form method="post" action="{% url 'recipes:recipe_note_delete' recipe.slug note.pk %}" data-note-delete-form hidden>
+                  {% csrf_token %}
+                </form>
+              </article>
+            {% endfor %}
+          </div>
+          <p class="notes-empty" data-notes-empty{% if recipe.notes.all %} hidden{% endif %}>Здесь пока нет заметок.</p>
+          <form class="note-form" data-note-form method="post" action="{% url 'recipes:recipe_note_add' recipe.slug %}">
+            {% csrf_token %}
+            <label for="new-note">Добавить заметку</label>
+            <textarea id="new-note" name="text" rows="4" placeholder="Добавить заметку…"></textarea>
+            <button type="submit">Добавить</button>
+          </form>
+        </aside>
         </div>
       </section>
 
