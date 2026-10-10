@@ -1,0 +1,136 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Рецепты — кнопик &amp; попик</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+</head>
+<body>
+  <main class="page-shell catalog-page">
+    <div class="paper">
+      <header class="header">
+        <div class="header-inner section-inner">
+          <a class="logo" href="{% url 'home' %}">кнопик <span>&amp;</span> попик</a>
+          <nav class="nav">
+            <a class="nav-active" href="{% url 'recipes:recipe_list' %}" aria-current="page">рецепты</a><a href="{% url 'home' %}#random">что приготовить?</a><a href="#">пробовали</a>
+          </nav>
+          <button class="pill pill-pink" type="button">войти</button>
+          <button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
+        </div>
+        <nav class="mobile-nav" id="mobile-menu" hidden>
+          <a class="nav-active" href="{% url 'recipes:recipe_list' %}" aria-current="page">рецепты</a>
+          <a href="{% url 'home' %}#random">что приготовить?</a>
+          <a href="#">пробовали</a>
+          <a class="mobile-login" href="#">войти</a>
+        </nav>
+      </header>
+
+      <section class="catalog-intro">
+        <div class="section-inner">
+          <h1>Все рецепты</h1>
+          <p>Ищи по названию и продуктам — или просто выбирай глазами.</p>
+          <form class="catalog-toolbar">
+            <div class="search-control">
+              <span class="control-label">поиск</span>
+              <div class="catalog-search-field">
+                <label class="sr-only" for="catalog-search">Поиск рецептов</label>
+                <input id="catalog-search" type="search" placeholder="Название блюда или продукт..." />
+                <button type="submit">найти <span>→</span></button>
+              </div>
+            </div>
+
+          </form>
+        </div>
+      </section>
+
+      <section class="catalog-content">
+        <div class="catalog-layout section-inner">
+          <div class="catalog-filter-region" id="catalog-filters-panel">
+            <div class="filters-mobile-controls">
+              <button class="filters-toggle" type="button" aria-expanded="false" aria-controls="catalog-filters-panel"><span class="filters-toggle-label">Фильтры</span><span class="filters-toggle-icon" aria-hidden="true">↓</span></button>
+            </div>
+          <aside class="catalog-filters" aria-label="Фильтры рецептов">
+            <div class="filters-columns">
+              <div class="filters-column filters-column--left">
+                <fieldset class="filter-group filter-group--category">
+                  <legend class="filter-title">Категория</legend>
+                  <div class="filter-content filter-options">
+                    <label><input type="checkbox" /> Завтраки</label>
+                    <label><input type="checkbox" /> Основные блюда</label>
+                    <label><input type="checkbox" /> Выпечка</label>
+                    <label><input type="checkbox" /> Десерты</label>
+                    <label><input type="checkbox" /> Супы</label>
+                  </div>
+                </fieldset>
+                <fieldset class="filter-group filter-group--time">
+                  <legend class="filter-title">Время</legend>
+                  <div class="filter-content filter-options">
+                    <label><input type="radio" name="cooking-time" /> до 30 мин</label>
+                    <label><input type="radio" name="cooking-time" /> до 60 мин</label>
+                    <label><input type="radio" name="cooking-time" /> до 90 мин</label>
+                  </div>
+                </fieldset>
+              </div>
+              <div class="filters-column filters-column--right">
+                <fieldset class="filter-group filter-group--products">
+                  <legend class="filter-title">Продукты</legend>
+                  <div class="filter-content filter-products-content">
+                    <input class="ingredient-input" type="text" placeholder="Добавить продукт..." />
+                    <div class="selected-chips"><span>курица <button type="button" aria-label="Удалить курицу">×</button></span><span>сыр <button type="button" aria-label="Удалить сыр">×</button></span></div>
+                  </div>
+                </fieldset>
+                <fieldset class="filter-group filter-group--difficulty">
+                  <legend class="filter-title">Сложность</legend>
+                  <div class="filter-content filter-options">
+                    <label><input type="radio" name="difficulty" /> Легко</label>
+                    <label><input type="radio" name="difficulty" /> Средне</label>
+                    <label><input type="radio" name="difficulty" /> Посложнее</label>
+                  </div>
+                </fieldset>
+                <fieldset class="filter-group filter-group--sort">
+                  <legend id="sort-title" class="filter-title">сортировать</legend>
+                  <div class="filter-content">
+                    <select id="sort-recipes" aria-labelledby="sort-title">
+                      <option>Сначала новые</option>
+                      <option>По алфавиту</option>
+                      <option>По рейтингу</option>
+                      <option>Сначала быстрые</option>
+                    </select>
+                  </div>
+                </fieldset>
+              </div>
+            </div>
+
+            <button class="filters-reset" type="button" hidden>Сбросить фильтры</button>
+          </aside>
+
+          </div>
+
+          <div class="catalog-results">
+            <p class="results-count">Найдено 24 рецепта</p>
+            <div class="catalog-grid">
+              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/salmon-orzo.png' %}" alt="Орзо с лососем" /></div><small>основные блюда · 25 мин</small><h3>Орзо с лососем</h3></a></article>
+              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/syrniki-cherry.png' %}" alt="Сырники с вишней" /></div><small>завтраки · 35 мин</small><h3>Сырники с вишней</h3></a></article>
+              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/apple-pie.png' %}" alt="Яблочный пирог" /></div><small>выпечка · 45 мин</small><h3>Яблочный пирог</h3></a></article>
+              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/tomato-soup.png' %}" alt="Томатный суп" /></div><small>супы · 55 мин</small><h3>Томатный суп</h3></a></article>
+              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/hero-raspberry.png' %}" alt="Творожная запеканка с малиной" /></div><small>десерты · 40 мин</small><h3>Запеканка с малиной</h3></a></article>
+              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/random-shrimp-noodles.png' %}" alt="Лапша с креветками" /></div><small>основные блюда · 30 мин</small><h3>Лапша с креветками</h3></a></article>
+              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/salmon-orzo.png' %}" alt="Орзо с лососем" /></div><small>основные блюда · 25 мин</small><h3>Орзо с лососем</h3></a></article>
+              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/syrniki-cherry.png' %}" alt="Сырники с вишней" /></div><small>завтраки · 35 мин</small><h3>Сырники с вишней</h3></a></article>
+              <article class="catalog-card"><a href="#"><div class="catalog-card-photo"><img src="{% static 'images/demo/tomato-soup.png' %}" alt="Томатный суп" /></div><small>супы · 55 мин</small><h3>Томатный суп</h3></a></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer><div class="footer-inner section-inner"><strong>кнопик &amp; попик</strong><span>готовим · пробуем · запоминаем ♡</span></div></footer>
+    </div>
+  </main>
+  <script src="{% static 'js/main.js' %}" defer></script>
+</body>
+</html>
