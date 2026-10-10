@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>кнопик & попик — кулинарная книга</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <main class="page-shell">
+    <div class="paper">
+      <header class="header">
+        <div class="header-inner section-inner">
+          <a class="logo" href="#">кнопик <span>&</span> попик</a>
+          <nav class="nav">
+            <a href="recipes.html">рецепты</a><a href="#random">что приготовить?</a><a href="#">пробовали</a>
+          </nav>
+          <button class="pill pill-pink">войти</button>
+          <button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
+        </div>
+        <nav class="mobile-nav" id="mobile-menu" hidden>
+          <a href="recipes.html">рецепты</a>
+          <a href="#random">что приготовить?</a>
+          <a href="#">пробовали</a>
+          <a class="mobile-login" href="#">войти</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="hero-inner section-inner">
+          <div class="hero-art">
+            <div class="photo hero-photo"><img src="assets/images/demo/hero-raspberry.png" alt="Творожная запеканка с кремом и малиной" /></div>
+          </div>
+          <div class="hero-copy">
+            <h1>Что сегодня будем <em>готовить?</em></h1>
+            <p>По названию блюда или продукту — без лишних приключений.</p>
+            <form class="search">
+              <input type="search" aria-label="Поиск рецептов" placeholder="например, груша…" />
+              <button>Найти <span>→</span></button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <div class="info-strip" aria-hidden="true"></div>
+
+      <section class="categories">
+        <div class="categories-inner section-inner">
+          <div class="section-head">
+            <div><h2>Что готовим?</h2></div>
+            <a href="#">все категории →</a>
+          </div>
+          <div class="category-row">
+            <button>завтраки</button><button>основное</button><button>выпечка</button><button>десерты</button><button>супы</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="random" id="random">
+        <div class="random-inner section-inner">
+          <div class="random-copy">
+            <span class="eyebrow">случайный рецепт</span>
+            <h2>Не знаешь,<br><em>чего хочется?</em></h2>
+            <p>Выбери категорию, продукты, время или сложность — а мы покажем один случайный рецепт.</p>
+            <button class="big-cta">что приготовить? <span>→</span></button>
+          </div>
+          <div class="random-photo-wrap">
+            <div class="photo random-photo"><img src="assets/images/demo/random-shrimp-noodles.png" alt="Лапша с креветками, авокадо и водорослями" /></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="latest" id="latest">
+        <div class="latest-inner section-inner">
+          <div class="section-head latest-head">
+            <div><h2>Недавно добавленные</h2></div>
+            <a href="#">все рецепты →</a>
+          </div>
+          <div class="cards">
+            <article class="card pink-card"><div class="photo card-photo"><img src="assets/images/demo/salmon-orzo.png" alt="Орзо с лососем" /></div><small>основные блюда · 25 мин</small><h3>Орзо с лососем</h3></article>
+            <article class="card mint-card"><div class="photo card-photo"><img src="assets/images/demo/syrniki-cherry.png" alt="Сырники с вишней" /></div><small>завтраки · 35 мин</small><h3>Сырники с вишней</h3></article>
+            <article class="card yellow-card"><div class="photo card-photo"><img src="assets/images/demo/apple-pie.png" alt="Яблочный пирог" /></div><small>выпечка · 45 мин</small><h3>Яблочный пирог</h3></article>
+            <article class="card lilac-card"><div class="photo card-photo"><img src="assets/images/demo/tomato-soup.png" alt="Томатный суп" /></div><small>супы · 55 мин</small><h3>Томатный суп</h3></article>
+            <article class="card pink-card"><div class="photo card-photo"><img src="assets/images/demo/salmon-orzo.png" alt="Орзо с лососем" /></div><small>основные блюда · 25 мин</small><h3>Орзо с лососем</h3></article>
+            <article class="card mint-card"><div class="photo card-photo"><img src="assets/images/demo/syrniki-cherry.png" alt="Сырники с вишней" /></div><small>завтраки · 35 мин</small><h3>Сырники с вишней</h3></article>
+            <article class="card yellow-card"><div class="photo card-photo"><img src="assets/images/demo/apple-pie.png" alt="Яблочный пирог" /></div><small>выпечка · 45 мин</small><h3>Яблочный пирог</h3></article>
+            <article class="card lilac-card"><div class="photo card-photo"><img src="assets/images/demo/tomato-soup.png" alt="Томатный суп" /></div><small>супы · 55 мин</small><h3>Томатный суп</h3></article>
+            <article class="card pink-card"><div class="photo card-photo"><img src="assets/images/demo/salmon-orzo.png" alt="Орзо с лососем" /></div><small>основные блюда · 25 мин</small><h3>Орзо с лососем</h3></article>
+            <article class="card mint-card"><div class="photo card-photo"><img src="assets/images/demo/syrniki-cherry.png" alt="Сырники с вишней" /></div><small>завтраки · 35 мин</small><h3>Сырники с вишней</h3></article>
+            <article class="card yellow-card"><div class="photo card-photo"><img src="assets/images/demo/apple-pie.png" alt="Яблочный пирог" /></div><small>выпечка · 45 мин</small><h3>Яблочный пирог</h3></article>
+            <article class="card lilac-card"><div class="photo card-photo"><img src="assets/images/demo/tomato-soup.png" alt="Томатный суп" /></div><small>супы · 55 мин</small><h3>Томатный суп</h3></article>
+          </div>
+        </div>
+      </section>
+
+      <footer><div class="footer-inner section-inner"><strong>кнопик & попик</strong><span>готовим · пробуем · запоминаем ♡</span></div></footer>
+    </div>
+  </main>
+  <script src="js/main.js" defer></script>
+</body>
+</html>

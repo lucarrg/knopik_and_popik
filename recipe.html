@@ -1,0 +1,144 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Орзо с лососем — кнопик &amp; попик</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/recipe-interactions.css" />
+  <link rel="stylesheet" href="css/recipe-interactions.css" />
+</head>
+<body>
+  <main class="page-shell recipe-page">
+    <div class="paper">
+      <header class="header">
+        <div class="header-inner section-inner">
+          <a class="logo" href="index.html">кнопик <span>&amp;</span> попик</a>
+          <nav class="nav">
+            <a class="nav-active" href="recipes.html">рецепты</a><a href="index.html#random">что приготовить?</a><a href="#">пробовали</a>
+          </nav>
+          <button class="pill pill-pink" type="button">войти</button>
+          <button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
+        </div>
+        <nav class="mobile-nav" id="mobile-menu" hidden>
+          <a class="nav-active" href="recipes.html">рецепты</a>
+          <a href="index.html#random">что приготовить?</a>
+          <a href="#">пробовали</a>
+          <a class="mobile-login" href="#">войти</a>
+        </nav>
+      </header>
+
+      <section class="recipe-hero">
+        <div class="recipe-hero-inner section-inner">
+          <div class="recipe-intro">
+            <div class="recipe-hero-top">
+              <a class="recipe-back recipe-ui-label" href="recipes.html">← К рецептам</a>
+            </div>
+            <h1>Орзо с лососем</h1>
+            <p class="recipe-description">Нежное орзо со сливочным соусом и лососем.</p>
+            <div class="recipe-tags" aria-label="Категории рецепта"><span class="recipe-chip">Основные блюда</span><span class="recipe-chip">Рыба</span></div>
+            <dl class="recipe-meta recipe-hero-meta" aria-label="Характеристики рецепта">
+              <div><dt class="recipe-ui-label">Подготовка</dt><dd class="recipe-meta-value">15 мин</dd></div>
+              <div><dt class="recipe-ui-label">Готовка</dt><dd class="recipe-meta-value">30 мин</dd></div>
+              <div><dt class="recipe-ui-label">Сложность</dt><dd class="recipe-meta-value">Средне</dd></div>
+              <div><dt class="recipe-ui-label">Рейтинг</dt><dd class="recipe-meta-value">4.8 / 5</dd></div>
+              <div><dt class="recipe-ui-label">Статус</dt><dd class="recipe-meta-value recipe-status-value">Проверено</dd></div>
+            </dl>
+          </div>
+
+          <figure class="recipe-main-photo"><img src="assets/images/demo/salmon-orzo.png" alt="Орзо с лососем в сливочном соусе" /></figure>
+        </div>
+      </section>
+
+      <section class="recipe-details">
+        <div class="recipe-details-inner section-inner">
+          <section class="recipe-ingredients" aria-labelledby="ingredients-title">
+            <div class="recipe-ingredients-head">
+              <p class="recipe-section-kicker">на 4 порции</p>
+              <section class="recipe-servings" aria-label="Управление количеством порций">
+                <div class="servings-controls">
+                  <button type="button" aria-label="Уменьшить количество порций" data-servings-action="decrease">−</button>
+                  <label class="sr-only" for="recipe-servings-count">Количество порций</label>
+                  <input id="recipe-servings-count" type="number" value="4" min="1" inputmode="numeric" />
+                  <button type="button" aria-label="Увеличить количество порций" data-servings-action="increase">+</button>
+                </div>
+              </section>
+            </div>
+            <h2 id="ingredients-title">Ингредиенты</h2>
+            <div class="ingredient-group">
+              <h3>Основное</h3>
+              <ul>
+                <li><span>Лосось</span><span>400 г</span></li><li><span>Орзо</span><span>250 г</span></li><li><span>Шпинат</span><span>150 г</span></li><li><span>Лук</span><span>1 шт.</span></li><li><span>Чеснок</span><span>2 зубчика</span></li><li><span>Сливки 20%</span><span>200 мл</span></li><li><span>Пармезан</span><span>50 г</span></li><li><span>Лимон</span><span>1 шт.</span></li><li><span>Оливковое масло</span><span>2 ст. л.</span></li><li><span>Соль и перец</span><span>по вкусу</span></li>
+              </ul>
+            </div>
+          </section>
+
+          <aside class="recipe-notes" aria-labelledby="notes-title">
+            <h2 id="notes-title">Заметки</h2>
+
+            <div class="notes-list" data-notes-list>
+              <article class="recipe-note" data-note>
+                <p class="note-meta">Маша · 10 октября 2026</p>
+                <p class="note-content">Я добавляю шпинат в самом конце: он остаётся ярким и не теряет свежесть рядом с тёплым сливочным соусом.</p>
+                <div class="note-owner-actions" aria-label="Управление заметкой">
+                  <button type="button" data-note-action="edit">Редактировать</button>
+                  <button type="button" data-note-action="delete" data-confirm-delete="note">Удалить</button>
+                </div>
+              </article>
+            </div>
+
+            <p class="notes-empty" data-notes-empty hidden>Здесь пока нет заметок.</p>
+
+            <form class="note-form" data-note-form>
+              <label for="new-note">Добавить заметку</label>
+              <textarea id="new-note" name="note" rows="4" placeholder="Добавить заметку…"></textarea>
+              <button type="submit">Добавить</button>
+            </form>
+          </aside>
+        </div>
+      </section>
+
+      <section class="recipe-steps section-inner" aria-labelledby="steps-title">
+        <p class="recipe-section-kicker">готовим вместе</p>
+        <h2 id="steps-title">Как приготовить</h2>
+        <ol class="recipe-step-list">
+          <li><article class="recipe-step"><p class="recipe-step-number">Шаг 1</p><h3>Подготовьте продукты</h3><p>Лук нарежьте мелким кубиком, чеснок измельчите. Лосось обсушите и разделите на крупные кусочки, лимон натрите на мелкой тёрке.</p><figure class="recipe-step-photo"><img src="assets/images/demo/salmon-orzo.png" alt="Подготовленные лосось и орзо" /></figure></article></li>
+          <li><article class="recipe-step"><p class="recipe-step-number">Шаг 2</p><h3>Обжарьте основу</h3><p>В глубокой сковороде разогрейте оливковое масло. Обжарьте лук до мягкости, добавьте чеснок и орзо, перемешайте, чтобы крупинки покрылись маслом.</p></article></li>
+          <li><article class="recipe-step"><p class="recipe-step-number">Шаг 3</p><h3>Добавьте сливочность</h3><p>Влейте горячую воду или бульон небольшими порциями и готовьте орзо до мягкости. Добавьте сливки, пармезан и лимонную цедру, посолите и поперчите.</p><figure class="recipe-step-photo"><img src="assets/images/demo/salmon-orzo.png" alt="Орзо в сливочном соусе" /></figure></article></li>
+          <li><article class="recipe-step"><p class="recipe-step-number">Шаг 4</p><h3>Соберите блюдо</h3><p>Выложите в сковороду лосось и шпинат, аккуратно перемешайте. Накройте на минуту, затем разложите по тарелкам и добавьте немного лимонного сока.</p></article></li>
+        </ol>
+        <p class="recipe-source">Источник: <a href="https://example.com/recipe/orzo-salmon">example.com/recipe/orzo-salmon</a></p>
+        <div class="recipe-owner-actions recipe-owner-actions--footer" aria-label="Управление рецептом">
+          <button class="recipe-action" type="button">Редактировать рецепт</button>
+          <button class="recipe-action recipe-action--delete" type="button" data-confirm-delete="recipe">Удалить рецепт</button>
+        </div>
+      </section>
+
+      <div class="recipe-modal" data-confirmation-modal hidden>
+        <div class="recipe-modal__backdrop" data-modal-close></div>
+        <section class="recipe-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="confirmation-title" aria-describedby="confirmation-description" tabindex="-1">
+          <h2 id="confirmation-title" data-confirmation-title>Удалить рецепт?</h2>
+          <p id="confirmation-description">Это действие нельзя отменить.</p>
+          <div class="recipe-modal__actions">
+            <button type="button" class="recipe-action" data-modal-close>Отмена</button>
+            <button type="button" class="recipe-action recipe-action--delete" data-confirmation-submit>Удалить</button>
+          </div>
+        </section>
+      </div>
+
+      <footer><div class="footer-inner section-inner"><strong>кнопик &amp; попик</strong><span>готовим · пробуем · запоминаем ♡</span></div></footer>
+    </div>
+  </main>
+  <script src="js/main.js" defer></script>
+  <script src="js/recipe-interactions.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
